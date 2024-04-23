@@ -11,8 +11,8 @@ import java.util.List;
 
 @Data
 @Builder
-@Document("chat")
-public class Chat {
+@Document("private_chat")
+public class PrivateUserChat {
 
     @Id
     private String id;

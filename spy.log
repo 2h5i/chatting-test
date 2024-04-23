@@ -1,0 +1,1 @@
+1713424628032|14|statement|connection 0|url jdbc:p6spy:mysql://ec2-43-202-9-27.ap-northeast-2.compute.amazonaws.com:3306/jainbank_dev?autoReconnect=true&useSSL=false&amp&serverTimezone=Asia/Seoul|SELECT @@character_set_database, @@sql_mode|SELECT @@character_set_database, @@sql_mode

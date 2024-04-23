@@ -6,11 +6,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import taei.chattingtest.enums.MessageType;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ChatDTO {
+public class ExpertChatDTO {
     // 메시지 타입 : 입장, 퇴장, 채팅
     // 메시지 타입에 따라 동작 구조 달라짐
     // 입장과 퇴장 ENTER, LEAVE경우 입/퇴장 이벤트 처리 실행
@@ -18,7 +21,11 @@ public class ChatDTO {
 
     private MessageType messageType;
     private Long roomId;
-    private String senderId;
+    private Long expertId;
     private String message;
-    private String time;
+    private String status;
+    private List<String> images;
+    private LocalDateTime createdAt;
+    private String expertName;
+    private String expertPhoto;
 }

@@ -12,7 +12,7 @@ import java.util.List;
 @Data
 @Builder
 @Document("chat")
-public class Chat {
+public class UserChat {
 
     @Id
     private String id;

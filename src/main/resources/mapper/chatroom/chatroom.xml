@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "mybatis-3-mapper.dtd">
+
+<mapper namespace="taei.chattingtest.repo.ChatRoomRepo">
+
+    <insert id="insertRoom" parameterType="hashMap" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_room
+        (
+            name,
+            photo,
+            limit_cnt,
+            room_type,
+            status,
+            expert_id,
+            created_at,
+            created_by
+        )
+        VALUES
+        (
+            #{name},
+            #{photo},
+            #{limitCnt},
+            #{roomType},
+            'USE',
+            #{ownerId},
+            NOW(),
+            #{clientId}
+        )
+    </insert>
+
+    <insert id="insertExpertToRoom" parameterType="hashMap">
+        INSERT INTO chat_room_user
+        (
+            chat_room_id,
+            expert_id,
+            created_at,
+            created_by
+        )
+        VALUES
+        (
+            #{roomId},
+            #{expertId},
+            NOW(),
+            #{clientId}
+        )
+    </insert>
+
+    <insert id="insertUserToRoom" parameterType="taei.chattingtest.dto.UserEnterReq">
+        INSERT INTO chat_room_user
+        (
+            chat_room_id,
+            user_id,
+            created_at,
+            created_by
+        )
+        VALUES
+        (
+            #{roomId},
+            #{userId},
+            NOW(),
+            #{userNickName}
+        )
+    </insert>
+
+    <delete id="deleteUserFromRoom" parameterType="taei.chattingtest.dto.UserLeaveReq">
+        DELETE FROM chat_room_user
+        WHERE chat_room_id = #{roomId}
+        AND user_id = #{userId}
+    </delete>
+
+    <select id="selectListChatRoomUser" parameterType="hashMap"
+            resultType="taei.chattingtest.dto.UserDTO">
+        SELECT
+            IF(cru.expert_id IS NULL, FALSE, TRUE) AS expert,
+            u.id AS user_id,
+            u.user_nick_name,
+            u.user_profile_photo,
+            ei.id AS expert_id,
+            ei.exp_name,
+            ei.exp_photo,
+            IF(u.id = #{userId}, TRUE, FALSE) AS my_account
+        FROM chat_room_user cru
+        LEFT JOIN users u
+        ON cru.user_id = u.id
+        LEFT JOIN expert_info ei
+        ON cru.expert_id = ei.id
+        WHERE cru.chat_room_id = #{roomId}
+    </select>
+
+    <select id="selectListMyOpenChatRoom" parameterType="long"
+            resultType="taei.chattingtest.dto.OpenChatRoomDTO">
+        SELECT
+            cr.id,
+            cr.name,
+            (SELECT name FROM membership m WHERE m.id = cr.room_type) AS room_type,
+            cr.photo,
+            (SELECT COUNT(*) FROM chat_room_user cru2 WHERE cru2.chat_room_id = cr.id) AS current_user_cnt,
+            cr.limit_cnt AS limit_user_cnt
+        FROM chat_room_user cru
+        LEFT JOIN chat_room cr
+        ON cru.chat_room_id = cr.id
+        WHERE cru.user_id = #{userId}
+    </select>
+
+    <sql id="defaultListAllOpenChatRoom">
+        WHERE cr.status NOT IN ('END')
+    </sql>
+
+    <select id="countListAllOpenChatRoom" parameterType="hashMap" resultType="long">
+        SELECT
+            COUNT(*)
+        FROM chat_room cr
+        <include refid="defaultListAllOpenChatRoom"/>
+    </select>
+
+    <select id="selectListAllOpenChatRoom" parameterType="hashMap"
+            resultType="taei.chattingtest.dto.OpenChatRoomDTO">
+        SELECT
+            cr.id,
+            cr.name,
+            (SELECT name FROM membership m WHERE m.id = cr.room_type) AS room_type,
+            (SELECT COUNT(*) FROM chat_room_user cru WHERE cru.chat_room_id = cr.id) AS current_user_cnt,
+            cr.limit_cnt AS limit_user_cnt,
+            cr.photo
+        FROM chat_room cr
+        <include refid="defaultListAllOpenChatRoom"/>
+        LIMIT #{rowStart}, #{pageSize}
+    </select>
+
+    <insert id="insertPrivateRoom" parameterType="hashMap" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO private_chat_room
+        (
+            user_id,
+            expert_id,
+            status,
+            created_at,
+            created_by
+        )
+        VALUES
+        (
+            #{userId},
+            #{expertId},
+            'USE',
+            NOW(),
+            #{clientId}
+        )
+    </insert>
+
+    <select id="selectMyExpertChatRoom" parameterType="long"
+            resultType="taei.chattingtest.dto.PrivateChatRoomDTO">
+        SELECT
+            pcr.id AS roomId,
+            ei.exp_name,
+            ei.exp_photo
+        FROM private_chat_room pcr
+        LEFT JOIN expert_info ei
+        ON pcr.expert_id = ei.id
+        WHERE pcr.user_id = #{userId}
+        AND pcr.expert_id = (SELECT
+        ea.expert_id
+        FROM expert_assign ea
+        WHERE ea.user_id = #{userId}
+        AND ea.active = 1
+        AND ea.assign_req_st = '10')
+        AND pcr.status = 'USE'
+    </select>
+
+    <sql id="defaultListMyPrivateChatRoom">
+        WHERE pcr.user_id = #{userId}
+        AND pcr.expert_id NOT IN (
+        (SELECT ea.expert_id
+        FROM expert_assign ea
+        WHERE ea.user_id = #{userId}
+        AND ea.active = 1
+        AND ea.assign_req_st = '10')
+        )
+    </sql>
+
+    <select id="countListMyPrivateChatRoom" resultType="long" parameterType="hashMap">
+        SELECT
+            COUNT(*)
+        FROM private_chat_room pcr
+        LEFT JOIN expert_info ei
+        ON pcr.expert_id = ei.id
+        <include refid="defaultListMyPrivateChatRoom"/>
+    </select>
+
+    <select id="selectListMyPrivateChatRoom" parameterType="hashMap"
+            resultType="taei.chattingtest.dto.PrivateChatRoomDTO">
+        SELECT
+            pcr.id AS roomId,
+            ei.exp_name,
+            ei.exp_photo
+        FROM private_chat_room pcr
+        LEFT JOIN expert_info ei
+        ON pcr.expert_id = ei.id
+        <include refid="defaultListMyPrivateChatRoom"/>
+        LIMIT #{rowStart}, #{pageSize}
+    </select>
+
+    <select id="selectOpenChatRoomById"
+            parameterType="taei.chattingtest.dto.GetOpenChatRoomByIdReqVO"
+            resultType="taei.chattingtest.dto.OpenChatRoomDTO">
+        SELECT
+            cr.id,
+            cr.name,
+            cr.status,
+            (SELECT use_notification FROM chat_room_user cru WHERE cru.chat_room_id = #{roomId} AND cru.user_id = #{userId}) AS use_notification
+        FROM chat_room cr
+        WHERE cr.id = #{roomId}
+    </select>
+
+    <update id="updateRoomNotification"
+            parameterType="taei.chattingtest.dto.SetChatRoomNotificationReqVO">
+        UPDATE chat_room_user SET
+            use_notification = #{useNotification},
+            updated_at = NOW(),
+            updated_by = #{clientId}
+        WHERE chat_room_id = #{roomId}
+        AND user_id = #{userId}
+    </update>
+
+    <select id="selectUserInfo" parameterType="long"
+            resultType="taei.chattingtest.dto.UserDTO">
+        SELECT
+            user_nick_name,
+            user_profile_photo
+        FROM users
+        WHERE id = #{userId}
+    </select>
+
+    <select id="selectExpertInfo" parameterType="long"
+            resultType="taei.chattingtest.dto.UserDTO">
+        SELECT
+            exp_name,
+            exp_photo
+        FROM expert_info
+        WHERE id = #{expertId}
+    </select>
+
+</mapper>
